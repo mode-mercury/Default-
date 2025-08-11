@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OCR Utility</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>OCR Utility</h1>
+    <form id="ocr-form">
+        <label>Image: <input type="file" id="image" required></label><br>
+        <label><input type="checkbox" id="invert"> Invert</label>
+        <label><input type="checkbox" id="mirror"> Mirror</label>
+        <label><input type="checkbox" id="flip_vertical"> Flip Vertical</label>
+        <label>Rotate:
+            <select id="rotate">
+                <option value="0">0</option>
+                <option value="90">90</option>
+                <option value="180">180</option>
+                <option value="270">270</option>
+            </select>
+        </label>
+        <label>OCR language: <input type="text" id="lang" value="eng"></label>
+        <label><input type="checkbox" id="romanize"> Romanize</label>
+        <button type="submit">Process</button>
+    </form>
+
+    <div id="output" style="display:none;">
+        <h2>OCR Result</h2>
+        <pre id="result"></pre>
+        <div id="romanized-block" style="display:none;">
+            <h3>Romanized</h3>
+            <pre id="romanized"></pre>
+        </div>
+        <h3>Character Names</h3>
+        <ul id="char-info"></ul>
+        <h3>Processed Image</h3>
+        <img id="processed" alt="Processed image" />
+    </div>
+
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.4/dist/tesseract.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
