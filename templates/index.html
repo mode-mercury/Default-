@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OCR Web Interface</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>OCR Utility</h1>
+    <form method="post" enctype="multipart/form-data">
+        <label>Image: <input type="file" name="image" required></label><br>
+        <label><input type="checkbox" name="invert"> Invert</label>
+        <label><input type="checkbox" name="mirror"> Mirror</label>
+        <label><input type="checkbox" name="flip_vertical"> Flip Vertical</label>
+        <label>Rotate:
+            <select name="rotate">
+                <option value="0">0</option>
+                <option value="90">90</option>
+                <option value="180">180</option>
+                <option value="270">270</option>
+            </select>
+        </label>
+        <label>OCR language: <input type="text" name="lang" value="eng"></label>
+        <label>Translate to: <input type="text" name="translate_to"></label>
+        <label><input type="checkbox" name="romanize"> Romanize</label>
+        <button type="submit">Process</button>
+    </form>
+
+    {% if result %}
+    <h2>OCR Result</h2>
+    <pre>{{ result }}</pre>
+    {% if romanized %}
+    <h3>Romanized</h3>
+    <pre>{{ romanized }}</pre>
+    {% endif %}
+    <h3>Character Names</h3>
+    <ul>
+        {% for line in char_info %}
+        <li>{{ line }}</li>
+        {% endfor %}
+    </ul>
+    {% if translation %}
+    <h3>Translation</h3>
+    <pre>{{ translation }}</pre>
+    {% endif %}
+    {% if processed_image %}
+    <h3>Processed Image</h3>
+    <img src="data:image/png;base64,{{ processed_image }}" alt="Processed image"/>
+    {% endif %}
+    {% endif %}
+</body>
+</html>

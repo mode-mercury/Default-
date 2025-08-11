@@ -1,0 +1,5 @@
+pytesseract
+pillow
+googletrans==4.0.0rc1
+flask
+transliterate
