@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Chaos Phrase Picker — Simple</title>
+<style>
+  :root { --bg:#0b0d10; --fg:#e6e8ea; --mut:#94a3b8; --acc:#86efac; --warn:#f59e0b; --err:#ef4444; --card:#151922; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif; }
+  header { padding:16px; border-bottom:1px solid #1f2937; display:flex; gap:12px; align-items:center; }
+  h1 { font-size:18px; margin:0 0 6px; flex:1; }
+  main { display:grid; gap:12px; padding:16px; grid-template-columns:1fr; max-width:1100px; margin:0 auto; }
+  .row { display:grid; gap:12px; grid-template-columns:1fr; }
+  @media (min-width: 900px) { .row.two { grid-template-columns:1fr 1fr; } }
+  .card { background:var(--card); padding:12px; border:1px solid #1f2937; border-radius:10px; }
+  label { display:block; font-weight:600; margin-bottom:6px; }
+  input, textarea, button, select { width:100%; box-sizing:border-box; padding:10px; border-radius:8px; border:1px solid #2b3442; background:#0f131b; color:var(--fg); }
+  textarea { min-height:80px; resize:vertical; }
+  small { color:var(--mut); }
+  .inline { display:flex; gap:8px; align-items:center; }
+  .inline > * { flex:1; }
+  .btn { display:inline-flex; justify-content:center; align-items:center; gap:8px; font-weight:700; cursor:pointer; background:#111827; border:1px solid #374151; transition:transform .02s ease; user-select:none; touch-action:manipulation; }
+  .btn:active { transform:scale(0.99); }
+  .btn.primary { background:linear-gradient(180deg,#1b2b1f,#102417); border-color:#264b2d; }
+  .btn.warn { background:#291f0d; border-color:#5b4208; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid #334155; color:var(--mut); font-size:12px; }
+  .grid { display:grid; gap:10px; }
+  .results { display:grid; gap:10px; }
+  .phrase { background:#0f131b; border:1px solid #253041; padding:10px; border-radius:8px; }
+  .meta { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+  code { background:#0c1016; padding:2px 6px; border-radius:6px; border:1px solid #1f2a38; }
+  .status { min-height:1.2em; color:var(--mut); }
+  .error { color:var(--err); }
+  .ok { color:var(--acc); }
+  /* Simple mode tweaks */
+  body.simple .row.two { display:none; }
+  body.simple .meta, body.simple #seedPill, body.simple #swipePill, body.simple #timePill, body.simple #exportBtn { display:none; }
+  body.simple #pressBtn, body.simple #shuffleBtn, body.simple #drawBtn { font-size:1.4em; padding:20px; }
+  body.simple .phrase .meta { display:none; }
+  .letter-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(24px,1fr)); gap:4px; margin-top:8px; }
+  .letter-grid span { display:flex; align-items:center; justify-content:center; border:1px solid #253041; padding:4px; }
+  .analysis div { margin-top:4px; }
+</style>
+</head>
+<body class="simple">
+<header>
+  <h1>Chaos Phrase Picker</h1>
+  <span class="pill" id="queryPill"></span>
+  <button class="btn" id="modeToggle">Advanced</button>
+  <div class="status" id="status" aria-live="polite"></div>
+  <input type="number" id="skipStep" value="2" min="1" max="10" style="width:60px;" title="Skip step"/>
+</header>
+
+<main>
+  <section class="row two" id="advancedControls">
+    <div class="card">
+      <label for="urls">Websites (one per line)</label>
+      <textarea id="urls" placeholder="https://example.com
+https://example.org/article.html"></textarea>
+
+      <div class="grid" style="margin-top:8px;">
+        <div>
+          <label for="proxySel">CORS Proxy</label>
+          <div class="inline">
+            <select id="proxySel">
+              <option value="corsProxy" selected>corsProxy (default)</option>
+              <option value="allOrigins">allOrigins</option>
+              <option value="thingproxy">thingproxy</option>
+              <option value="custom">Custom</option>
+            </select>
+            <input id="customProxy" placeholder="Custom prefix (e.g., http://localhost:8787/fetch?url=)" />
+          </div>
+          <small>Using a proxy is required for most cross-site fetches in browser.</small>
+        </div>
+        <div>
+          <label for="file">Local Text/Markdown/HTML Files</label>
+          <input id="file" type="file" multiple accept=".txt,.md,.html,.htm" />
+          <small>PDF/DOCX need extra parsers. Keep it simple for now.</small>
+        </div>
+      </div>
+
+      <div class="inline" style="margin-top:8px;">
+        <button class="btn" id="ingestBtn">Ingest Sources</button>
+        <button class="btn warn" id="clearBtn" title="Clear corpus">Clear</button>
+      </div>
+      <small id="corpusInfo" class="pill" style="margin-top:8px;">Corpus: 0 chars, 0 sources</small>
+
+      <div style="margin-top:8px;">
+        <small>Auto-included each ingest: random query on gematrix & duckduckgo.</small>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>Selection Controls</label>
+      <div class="grid">
+        <div class="inline">
+          <div>
+            <label for="mode">Phrase Type</label>
+            <select id="mode">
+              <option value="sentences">Sentences</option>
+              <option value="ngrams">Word windows</option>
+            </select>
+          </div>
+          <div>
+            <label for="win">Words (if windows)</label>
+            <input id="win" type="number" min="3" max="16" value="7" />
+          </div>
+        </div>
+
+        <div class="inline">
+          <div>
+            <label for="count">How many</label>
+            <input id="count" type="number" min="1" max="100" value="7" />
+          </div>
+          <div>
+            <label for="startLetter">Start Letter</label>
+            <input id="startLetter" maxlength="1" placeholder="(auto)" />
+            <small>Leave empty to let RNG choose.</small>
+          </div>
+        </div>
+
+        <div class="inline">
+          <div>
+            <label for="lettersMap">RNG Letter Map</label>
+            <input id="lettersMap" value="ETAOINSHRDLUCMFWYPVBGKQJXZ" />
+            <small>Used to bias letter choice; shuffled per draw.</small>
+          </div>
+        </div>
+
+        <div class="inline">
+          <button class="btn primary" id="pressBtn">Press & Hold to Seed</button>
+          <span class="pill">hold length → entropy</span>
+        </div>
+
+        <div class="inline">
+          <button class="btn" id="shuffleBtn">Swipe / Shuffle Area</button>
+          <span class="pill">swipes → entropy</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="row">
+    <div class="card">
+      <div class="inline">
+        <button class="btn primary" id="drawBtn">Draw Phrases</button>
+        <button class="btn" id="exportBtn">Export JSON</button>
+      </div>
+      <div class="meta" style="margin-top:8px;">
+        <span class="pill" id="seedPill">Seed: —</span>
+        <span class="pill" id="swipePill">Swipes: 0</span>
+        <span class="pill" id="timePill">Time: —</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="row">
+    <div class="card">
+      <label>Results</label>
+      <div id="results" class="results" aria-live="polite"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  const PROXIES = {
+    allOrigins: { url: 'https://api.allorigins.win/raw?url=', headers: {} },
+    corsProxy:  { url: 'https://corsproxy.io/?',              headers: {} },
+    thingproxy: { url: 'https://thingproxy.freeboard.io/fetch/', headers: {} },
+  };
+
+  const $ = s => document.querySelector(s);
+  const setStatus = (m,cls='') => { const el=$('#status'); el.textContent=m; el.className='status '+cls; };
+
+  function randomQuery(){
+    const phrases=['open ai','chaos magic','hello world','quantum flux'];
+    if (Math.random()<0.5) return String(Math.floor(Math.random()*100)+1);
+    return phrases[Math.floor(Math.random()*phrases.length)];
+  }
+
+  const state = { corpus:[], phrases:[], swipes:0, holdMs:0, seed:null, lastDrawMeta:[], defaultQuery: randomQuery(), simple:true };
+  $('#queryPill').textContent = `Query: ${state.defaultQuery}`;
+
+  const stripHTML = (html) => html
+    .replace(/<script[\s\S]*?<\/script>/gi,' ')
+    .replace(/<style[\s\S]*?<\/style>/gi,' ')
+    .replace(/<!--[\s\S]*?-->/g,' ')
+    .replace(/<[^>]+>/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+
+  const splitSentences = (txt) => {
+    const safe = txt.replace(/\s+/g,' ').trim();
+    const parts = safe.split(/(?<=\w[.!?])\s+(?=[A-Z0-9“"(\[])/g);
+    return parts.filter(s => s && s.length > 20);
+  };
+
+  const ngrams = (txt, n=7) => {
+    const words = txt.split(/\s+/).filter(Boolean);
+    const out=[];
+    for(let i=0;i<=words.length-n;i++){ const seg=words.slice(i,i+n).join(' '); if(/[a-zA-Z]/.test(seg)) out.push(seg); }
+    return out;
+  };
+
+  function XorShift32(seed){ let x=(seed|0)||123456789; return {
+    float: ()=>{ x^=x<<13; x^=x>>>17; x^=x<<5; return (x>>>0)/0xFFFFFFFF; }
+  };}
+
+  const nowInfo = () => { const d=new Date(); return {h:d.getHours(),m:d.getMinutes(),s:d.getSeconds(),ms:d.getMilliseconds()}; };
+  const escapeHTML = s => s.replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]));
+  const shorten = (s,n=64) => s.length>n? s.slice(0,n-3)+'…' : s;
+
+  function currentProxyPrefix(){
+    const sel = $('#proxySel').value;
+    if (sel === 'custom') return $('#customProxy').value.trim();
+    return PROXIES[sel]?.url || PROXIES.corsProxy.url;
+  }
+
+  function autoSources(){
+    const q = state.defaultQuery;
+    const sources = [ 'https://www.777codes.com/', `https://duckduckgo.com/?q=${encodeURIComponent(q)}` ];
+    const gem = g => `https://www.gematrix.org/?search=${encodeURIComponent(g)}`;
+    if (/^\d+$/.test(q)){
+      const n=parseInt(q,10); [n/2,n,n*2].forEach(v=>sources.push(gem(String(v))));
+    }else{
+      sources.push(gem(q));
+      sources.push(gem(q.split('').reverse().join('')));
+    }
+    return sources;
+  }
+
+  async function fetchViaProxy(url, proxyPrefix){
+    const final = proxyPrefix + encodeURIComponent(url);
+    const res = await fetch(final, { mode:'cors' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const ct = (res.headers.get('content-type')||'').toLowerCase();
+    const raw = await res.text();
+    const text = ct.includes('html') ? stripHTML(raw) : raw;
+    return text;
+  }
+
+  async function ingest(){
+    setStatus('Ingesting…');
+    const proxy = currentProxyPrefix();
+
+    const userUrls = $('#urls').value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    const urls = [...new Set([...autoSources(), ...userUrls])];
+
+    const files = Array.from(($('#file').files)||[]);
+    const newItems = [];
+
+    for (const u of urls){
+      try{
+        const t = await fetchViaProxy(u, proxy);
+        newItems.push({source:u, text:t});
+        setStatus(`Fetched: ${u}`, 'ok');
+      }catch(e){
+        setStatus(`Failed: ${u} — ${e.message}`, 'error');
+      }
+    }
+
+    for (const f of files){
+      try{
+        const raw = await f.text();
+        const text = f.name.match(/\.(html?|htm)$/i) ? stripHTML(raw) : raw;
+        newItems.push({source:`file://${f.name}`, text});
+      }catch(e){
+        setStatus(`File error: ${f.name} — ${e.message}`, 'error');
+      }
+    }
+
+    state.corpus.push(...newItems);
+    updateCorpusInfo();
+    buildPhrasePool();
+    setStatus(`Ingested ${newItems.length} sources.`, 'ok');
+  }
+
+  function updateCorpusInfo(){
+    const chars = state.corpus.reduce((a,c)=>a+c.text.length,0);
+    $('#corpusInfo').textContent = `Corpus: ${chars.toLocaleString()} chars, ${state.corpus.length} sources`;
+  }
+
+  function buildPhrasePool(){
+    const mode = $('#mode').value;
+    const win = Math.max(3, Math.min(16, parseInt($('#win').value||'7',10)));
+    const pool=[];
+    for (const item of state.corpus){
+      const parts = (mode==='sentences') ? splitSentences(item.text) : ngrams(item.text, win);
+      for (const p of parts) pool.push({phrase:p, source:item.source});
+    }
+    state.phrases = pool;
+  }
+
+  (function(){
+    const btn = $('#pressBtn');
+    let downAt=0;
+    function start(){ downAt=performance.now(); btn.classList.add('active'); $('#seedPill').textContent='Seed: (holding…)'; }
+    function end(){ if(!downAt) return; const dur=Math.max(1,Math.round(performance.now()-downAt)); state.holdMs=dur; btn.classList.remove('active'); $('#seedPill').textContent=`Seed partial (hold): ${dur} ms`; downAt=0; }
+    btn.addEventListener('mousedown',start);
+    btn.addEventListener('touchstart',e=>{e.preventDefault();start();},{passive:false});
+    window.addEventListener('mouseup',end);
+    window.addEventListener('touchend',end);
+  })();
+
+  (function(){
+    const area = $('#shuffleBtn');
+    let swiping=false,last=null,count=0;
+    const getXY = e => (e.touches&&e.touches[0]) ? {x:e.touches[0].clientX,y:e.touches[0].clientY} : {x:e.clientX,y:e.clientY};
+    function begin(e){ swiping=true; last=getXY(e); }
+    function move(e){
+      if(!swiping) return;
+      const cur = getXY(e);
+      if(!last){ last=cur; return; }
+      const dist = Math.hypot(cur.x-last.x, cur.y-last.y);
+      if (dist>40){ count++; last=cur; state.swipes=count; $('#swipePill').textContent=`Swipes: ${state.swipes}`; }
+    }
+    function end(){ swiping=false; }
+    area.addEventListener('mousedown',begin);
+    area.addEventListener('mousemove',move);
+    window.addEventListener('mouseup',end);
+    area.addEventListener('touchstart',e=>{e.preventDefault();begin(e);},{passive:false});
+    area.addEventListener('touchmove',e=>{e.preventDefault();move(e);},{passive:false});
+    area.addEventListener('touchend',end);
+  })();
+
+  function buildSeed(){
+    const t = nowInfo();
+    const letterMap = ($('#lettersMap').value.trim() || 'ETAOINSHRDLUCMFWYPVBGKQJXZ');
+    const cryptoBuf = new Uint32Array(2); crypto.getRandomValues(cryptoBuf);
+    const mapHash = [...letterMap].reduce((a,c)=>((a*33)^c.charCodeAt(0))>>>0,5381)>>>0;
+    let seed=0;
+    seed ^= (t.h<<27) ^ (t.m<<21) ^ (t.s<<15) ^ (t.ms & 0x7fff);
+    seed ^= (state.holdMs & 0xffffffff) ^ ((state.swipes & 0xffff)<<8);
+    seed ^= cryptoBuf[0]^cryptoBuf[1]^mapHash;
+    seed >>>=0; state.seed = seed || 0xA5F17C3D;
+    $('#seedPill').textContent = `Seed: 0x${state.seed.toString(16)}`;
+    $('#timePill').textContent = `Time: ${String(t.h).padStart(2,'0')}:${String(t.m).padStart(2,'0')}:${String(t.s).padStart(2,'0')}.${t.ms}`;
+    return state.seed;
+  }
+
+  function chooseStartLetter(prng){
+    const manual = $('#startLetter').value.trim();
+    if (manual) return manual[0].toUpperCase();
+    const arr = [...($('#lettersMap').value.trim() || 'ETAOINSHRDLUCMFWYPVBGKQJXZ').toUpperCase().replace(/[^A-Z]/g,'')];
+    for (let i=arr.length-1;i>0;i--){ const j=Math.floor(prng.float()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+    return arr[0] || 'E';
+  }
+
+  function equidistant(str, step){ const clean=str.replace(/\s+/g,''); let out=''; for(let i=0;i<clean.length;i+=step){ out+=clean[i]; } return out; }
+  function cumulative(str){ const clean=str.replace(/\s+/g,''); let out='',idx=0,step=1; while(idx<clean.length){ out+=clean[idx]; idx+=step; step++; } return out; }
+  function exponential(str){ const clean=str.replace(/\s+/g,''); let out='',idx=0,step=1; while(idx<clean.length){ out+=clean[idx]; idx+=step; step*=2; } return out; }
+  function gematriaEquivalent(str){ const clean=str.toUpperCase().replace(/[^A-Z]/g,''); let out='',total=0; for(const ch of clean){ total+=ch.charCodeAt(0)-64; const code=((total-1)%26)+65; out+=String.fromCharCode(code); } return out; }
+  const reverse = str => str.split('').reverse().join('');
+  function chessMoves(str){ const letters=str.replace(/\s+/g,''); const cols=8; const rows=Math.ceil(letters.length/cols); const moves=[[2,1],[1,2],[-1,2],[-2,1],[-2,-1],[-1,-2],[1,-2],[2,-1]]; let x=0,y=0,out=letters[0]||''; for(const m of moves){ x+=m[0]; y+=m[1]; if(x<0||y<0||x>=cols||y>=rows) break; const idx=y*cols+x; const ch=letters[idx]; if(!ch) break; out+=ch; } return out; }
+
+  function renderAnalyses(text){
+    const wrap=document.createElement('div'); wrap.className='analysis';
+    const grid=document.createElement('div'); grid.className='letter-grid';
+    for(const ch of text.replace(/\s+/g,'')){
+      const cell=document.createElement('span'); cell.textContent=ch.toUpperCase(); grid.appendChild(cell);
+    }
+    wrap.appendChild(grid);
+    const skip=parseInt($('#skipStep').value||'2',10);
+    const analyses={
+      Equidistant: equidistant(text, skip),
+      Cumulative: cumulative(text),
+      Exponential: exponential(text),
+      Gematria: gematriaEquivalent(text),
+      Reverse: reverse(text),
+      Chess: chessMoves(text)
+    };
+    for(const [k,v] of Object.entries(analyses)){
+      const line=document.createElement('div'); line.innerHTML=`<span class="pill">${k}</span> ${escapeHTML(v)}`; wrap.appendChild(line);
+    }
+    return wrap;
+  }
+
+  function draw(){
+    if (!state.corpus.length){ setStatus('No corpus yet. Ingest some sources first.', 'error'); return; }
+    buildPhrasePool();
+    if (!state.phrases.length){ setStatus('Corpus ingested, but no phrases extracted. Try a different mode/window.', 'error'); return; }
+    buildSeed();
+    const prng = XorShift32(state.seed);
+    const need = Math.max(1, Math.min(100, parseInt($('#count').value||'7',10)));
+    const startLetter = chooseStartLetter(prng);
+    const pool = state.phrases.filter(x => x.phrase.trim()[0]?.toUpperCase() === startLetter);
+    const bag = pool.length ? pool : state.phrases;
+
+    const picks=[];
+    for(let i=0;i<need;i++){ const idx=Math.floor(prng.float()*bag.length); picks.push({...bag[idx], idx}); }
+
+    const out=$('#results'); out.innerHTML='';
+    state.lastDrawMeta=[];
+    picks.forEach((p,k)=>{
+      const ts=new Date().toISOString();
+      const meta={ order:k+1, ts, source:p.source, index:p.idx, seed:state.seed, swipes:state.swipes, holdMs:state.holdMs, mode:$('#mode').value, window:parseInt($('#win').value||'7',10), startLetter };
+      state.lastDrawMeta.push({ text:p.phrase, ...meta });
+      const div=document.createElement('div'); div.className='phrase';
+      div.innerHTML = `<div>${escapeHTML(p.phrase)}</div>`;
+      if(!state.simple){
+        const m=document.createElement('div'); m.className='meta';
+        m.innerHTML=`<span class="pill">#${k+1}</span><span class="pill">Start: ${startLetter}</span><span class="pill">Src: <code>${escapeHTML(shorten(p.source))}</code></span><span class="pill">Seed: <code>${state.seed.toString(16)}</code></span><span class="pill">Hold: ${state.holdMs}ms</span><span class="pill">Swipes: ${state.swipes}</span><span class="pill">${meta.mode}${meta.mode==='ngrams' ? '•'+meta.window : ''}</span>`;
+        div.appendChild(m);
+      } else {
+        div.appendChild(renderAnalyses(p.phrase));
+      }
+      out.appendChild(div);
+    });
+    setStatus(`Drew ${picks.length} phrase(s) ${pool.length?`from '${startLetter}'`:'(fallback: any letter)'} .`, 'ok');
+  }
+
+  function exportJSON(){
+    if (!state.lastDrawMeta.length){ setStatus('Nothing to export. Draw first.', 'error'); return; }
+    const blob=new Blob([JSON.stringify(state.lastDrawMeta,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob); const a=document.createElement('a');
+    a.href=url; a.download=`chaos_phrases_${Date.now()}.json`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),5000); setStatus('Exported JSON.','ok');
+  }
+
+  function clearAll(){
+    state.corpus=[]; state.phrases=[]; state.lastDrawMeta=[]; state.swipes=0; state.holdMs=0; state.seed=null;
+    $('#results').innerHTML=''; $('#swipePill').textContent='Swipes: 0'; $('#seedPill').textContent='Seed: —'; $('#timePill').textContent='Time: —';
+    updateCorpusInfo(); setStatus('Cleared.','ok');
+  }
+
+  $('#ingestBtn').addEventListener('click', ingest);
+  $('#drawBtn').addEventListener('click', draw);
+  $('#exportBtn').addEventListener('click', exportJSON);
+  $('#clearBtn').addEventListener('click', clearAll);
+  $('#mode').addEventListener('change', buildPhrasePool);
+  $('#win').addEventListener('change', buildPhrasePool);
+  $('#modeToggle').addEventListener('click', () => {
+    state.simple = !state.simple;
+    document.body.classList.toggle('simple', state.simple);
+    $('#modeToggle').textContent = state.simple ? 'Advanced' : 'Simple';
+  });
+
+  setStatus('Ready.');
+  if(state.simple){ ingest(); }
+})();
+</script>
+</body>
+</html>
