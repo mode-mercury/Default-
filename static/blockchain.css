@@ -1,0 +1,10 @@
+body { font-family: Arial, sans-serif; background:#f5f5f5; margin:0; padding:0; }
+header, footer { background:#0a3550; color:#fff; text-align:center; padding:1em; }
+.banner { max-width:100%; height:auto; }
+section { padding:1em 2em; }
+#proposal-list li { margin:0.5em 0; }
+#forum { background:#fff; border-top:1px solid #ccc; }
+#chat.hidden { display:none; }
+#chat { border:1px solid #aaa; padding:0.5em; margin-top:1em; }
+#messages { list-style:none; padding:0; max-height:200px; overflow-y:auto; }
+#blog { margin-top:1em; color:#444; }
