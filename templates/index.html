@@ -2,51 +2,1519 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>OCR Web Interface</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>CODEX: UNIFRACTURAL GLYPHOS - Open World Explorer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Press Start 2P', monospace;
+            background: #0a0a0a;
+            color: #00ffff;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            touch-action: manipulation;
+        }
+        
+        /* Enhanced Scanline Effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 255, 255, 0.03) 2px,
+                    rgba(0, 255, 255, 0.03) 3px,
+                    transparent 3px
+                ),
+                radial-gradient(ellipse at center, transparent 60%, rgba(0, 255, 255, 0.02) 100%);
+            pointer-events: none;
+            z-index: 500;
+            animation: scanlines 0.08s linear infinite;
+        }
+        
+        @keyframes scanlines {
+            0% { transform: translateY(0px); }
+            100% { transform: translateY(3px); }
+        }
+        
+        /* Enhanced CRT Effect */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(ellipse at center, 
+                    transparent 0%, 
+                    transparent 60%, 
+                    rgba(0,0,0,0.1) 80%, 
+                    rgba(0,0,0,0.3) 100%);
+            pointer-events: none;
+            z-index: 501;
+        }
+        
+        /* TOP STATUS BAR */
+        .top-status {
+            background: linear-gradient(90deg, #1a0033 0%, #330066 50%, #1a0033 100%);
+            border-bottom: 2px solid #00ffff;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 
+                inset 0 0 15px rgba(0, 255, 255, 0.2),
+                0 3px 10px rgba(0, 255, 255, 0.3);
+            position: relative;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+        
+        .status-left {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            font-size: clamp(4px, 1.5vw, 6px);
+            color: #00ffff;
+            text-shadow: 1px 1px 0 #000;
+            min-width: 100px;
+        }
+        
+        .main-title {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .title {
+            font-size: clamp(8px, 3.5vw, 14px);
+            color: #ffff00;
+            text-shadow: 
+                2px 2px 0px #ff0000,
+                4px 4px 0px #000000,
+                0 0 10px #ffff00;
+            animation: titleFlicker 3s infinite;
+            letter-spacing: 1px;
+            line-height: 1.2;
+        }
+        
+        @keyframes titleFlicker {
+            0%, 85%, 100% { 
+                opacity: 1; 
+                text-shadow: 
+                    2px 2px 0px #ff0000,
+                    4px 4px 0px #000000,
+                    0 0 10px #ffff00;
+            }
+            90% { 
+                opacity: 0.8; 
+                text-shadow: 
+                    2px 2px 0px #00ff00,
+                    4px 4px 0px #000000,
+                    0 0 15px #00ffff;
+            }
+            95% { 
+                opacity: 0.9; 
+                text-shadow: 
+                    2px 2px 0px #ff00ff,
+                    4px 4px 0px #000000,
+                    0 0 20px #ff0000;
+            }
+        }
+        
+        .subtitle {
+            font-size: clamp(4px, 1.8vw, 7px);
+            color: #ff6b6b;
+            margin-top: 3px;
+            line-height: 1.1;
+            text-shadow: 1px 1px 0 #000;
+        }
+        
+        .status-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            font-size: clamp(4px, 1.5vw, 6px);
+            color: #ffff00;
+            text-shadow: 1px 1px 0 #000;
+            min-width: 100px;
+        }
+        
+        /* Game Container */
+        .game-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #000;
+            position: relative;
+            min-height: 0;
+        }
+        
+        /* Main Game Area */
+        .main-game {
+            flex: 1;
+            display: flex;
+            position: relative;
+            min-height: 0;
+        }
+        
+        /* Game World Canvas - Now covers full screen with detailed outdoor world */
+        .game-world {
+            flex: 1;
+            background: 
+                linear-gradient(180deg, 
+                    #001122 0%,     /* Dark sky at top */
+                    #002244 30%,    /* Lighter sky */
+                    #003366 60%,    /* Horizon */
+                    #224422 80%,    /* Grass/hills */
+                    #114411 100%    /* Dark ground */
+                );
+            position: relative;
+            overflow: hidden;
+            min-width: 0;
+            border: 2px solid #00ffff;
+            border-top: none;
+            box-shadow: 
+                inset 0 0 20px rgba(0, 255, 255, 0.2),
+                0 0 30px rgba(0, 255, 255, 0.3);
+        }
+        
+        .world-canvas {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(32, 1fr);
+            grid-template-rows: repeat(24, 1fr);
+            background: 
+                /* Sky gradient */
+                linear-gradient(180deg, 
+                    #000033 0%,
+                    #001166 15%,
+                    #002299 30%,
+                    #0044aa 45%,
+                    #226633 70%,
+                    #335544 85%,
+                    #112211 100%
+                ),
+                /* Cloud pattern */
+                radial-gradient(ellipse 20px 8px at 20% 25%, rgba(255,255,255,0.1) 40%, transparent 50%),
+                radial-gradient(ellipse 30px 10px at 60% 30%, rgba(255,255,255,0.08) 40%, transparent 50%),
+                radial-gradient(ellipse 25px 12px at 80% 20%, rgba(255,255,255,0.12) 40%, transparent 50%);
+            position: relative;
+            gap: 0;
+        }
+        
+        .pixel {
+            border: 0.25px solid rgba(0, 100, 50, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(6px, 2.2vw, 11px);
+            line-height: 1;
+            transition: none;
+            position: relative;
+            min-width: 0;
+            font-family: 'Press Start 2P', monospace;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            text-rendering: optimizeSpeed;
+        }
+        
+        /* Enhanced Player Sprite */
+        .player {
+            background: 
+                radial-gradient(circle at 30% 30%, #ffffff 20%, #ffff00 30%, #ff8800 60%, #cc4400 90%);
+            color: #000;
+            text-shadow: 
+                1px 0 0 #ffff00,
+                -1px 0 0 #ffff00,
+                0 1px 0 #ffff00,
+                0 -1px 0 #ffff00,
+                0 0 4px #ffff00;
+            box-shadow: 
+                inset 3px 3px 0 rgba(255,255,255,0.9),
+                inset -2px -2px 0 rgba(0,0,0,0.4),
+                0 0 8px #ffff00,
+                0 0 16px rgba(255, 255, 0, 0.4);
+            animation: playerPulse 1.2s infinite;
+            z-index: 100;
+            border: 2px solid #000;
+            border-radius: 2px;
+        }
+        
+        @keyframes playerPulse {
+            0%, 100% { 
+                box-shadow: 
+                    inset 3px 3px 0 rgba(255,255,255,0.9),
+                    inset -2px -2px 0 rgba(0,0,0,0.4),
+                    0 0 8px #ffff00,
+                    0 0 16px rgba(255, 255, 0, 0.4);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 
+                    inset 3px 3px 0 rgba(255,255,255,1),
+                    inset -2px -2px 0 rgba(0,0,0,0.6),
+                    0 0 12px #ffff00,
+                    0 0 24px rgba(255, 255, 0, 0.6);
+                transform: scale(1.05);
+            }
+        }
+        
+        /* OUTDOOR TERRAIN TYPES */
+        .grass {
+            background: 
+                repeating-linear-gradient(90deg, #228B22 0px, #228B22 1px, #32CD32 1px, #32CD32 2px),
+                linear-gradient(180deg, #32CD32 0%, #228B22 50%, #006400 100%);
+            color: #90EE90;
+            text-shadow: 0 0 2px #006400;
+        }
+        
+        .dirt-path {
+            background: 
+                repeating-linear-gradient(45deg, #8B4513 0px, #8B4513 2px, #A0522D 2px, #A0522D 4px),
+                linear-gradient(135deg, #A0522D, #8B4513);
+            color: #CD853F;
+            text-shadow: 0 0 2px #654321;
+        }
+        
+        .water {
+            background: 
+                radial-gradient(circle at 25% 25%, #87CEEB 15%, transparent 16%),
+                radial-gradient(circle at 75% 75%, #4682B4 15%, transparent 16%),
+                linear-gradient(135deg, #1E90FF, #0000CD);
+            color: #E0FFFF;
+            animation: waterRipple 3s infinite ease-in-out;
+            text-shadow: 0 0 3px #4682B4;
+        }
+        
+        @keyframes waterRipple {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.02); }
+        }
+        
+        .tree {
+            background: 
+                linear-gradient(180deg, #228B22 0%, #006400 30%, #8B4513 70%, #654321 100%);
+            color: #90EE90;
+            text-shadow: 
+                2px 2px 0 #006400,
+                0 0 5px #32CD32;
+            box-shadow: inset 2px 2px 0 rgba(255,255,255,0.2);
+        }
+        
+        .rock {
+            background: 
+                radial-gradient(ellipse at 30% 30%, #DCDCDC 20%, #A9A9A9 50%, #696969 80%);
+            color: #F5F5F5;
+            text-shadow: 
+                2px 2px 0 #2F4F4F,
+                0 0 3px #DCDCDC;
+            box-shadow: 
+                inset 3px 3px 0 rgba(255,255,255,0.6),
+                inset -2px -2px 0 rgba(0,0,0,0.4);
+        }
+        
+        .flower {
+            background: 
+                radial-gradient(circle at center, #FF69B4 20%, #FF1493 40%, #228B22 60%, #006400 80%);
+            color: #FFB6C1;
+            animation: flowerSway 4s infinite ease-in-out;
+            text-shadow: 0 0 4px #FF69B4;
+        }
+        
+        @keyframes flowerSway {
+            0%, 100% { transform: rotate(-1deg) scale(1); }
+            50% { transform: rotate(1deg) scale(1.1); }
+        }
+        
+        .mountain {
+            background: 
+                linear-gradient(45deg, #2F4F4F 0%, #708090 30%, #D3D3D3 60%, #F5F5F5 100%);
+            color: #F8F8FF;
+            text-shadow: 
+                2px 2px 0 #2F4F4F,
+                0 0 5px #D3D3D3;
+            box-shadow: 
+                inset 4px 4px 0 rgba(255,255,255,0.8),
+                inset -3px -3px 0 rgba(0,0,0,0.5);
+        }
+        
+        .bridge {
+            background: 
+                repeating-linear-gradient(90deg, #8B4513 0px, #8B4513 3px, #CD853F 3px, #CD853F 6px),
+                linear-gradient(180deg, #D2691E, #8B4513);
+            color: #F5DEB3;
+            text-shadow: 2px 2px 0 #654321;
+            box-shadow: 
+                inset 2px 2px 0 rgba(245,222,179,0.7),
+                0 2px 4px rgba(0,0,0,0.4);
+        }
+        
+        .sky {
+            background: transparent;
+            color: rgba(255,255,255,0.3);
+        }
+        
+        /* ENTITIES */
+        .npc {
+            background: 
+                radial-gradient(circle at 30% 30%, #FFE4B5 20%, #DEB887 50%, #8B7D6B 80%);
+            color: #2F4F4F;
+            animation: npcBob 2s infinite ease-in-out;
+            text-shadow: 
+                1px 1px 0 #FFE4B5,
+                0 0 3px #DEB887;
+            box-shadow: 
+                inset 2px 2px 0 rgba(255,255,255,0.6),
+                0 0 8px rgba(222,184,135,0.5);
+        }
+        
+        @keyframes npcBob {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-2px); }
+        }
+        
+        .animal {
+            background: 
+                radial-gradient(circle at 40% 30%, #D2691E 15%, #8B4513 40%, #654321 70%);
+            color: #F5DEB3;
+            animation: animalWalk 1.5s infinite ease-in-out;
+            text-shadow: 1px 1px 0 #654321;
+        }
+        
+        @keyframes animalWalk {
+            0%, 100% { transform: scale(1) rotate(-1deg); }
+            50% { transform: scale(1.05) rotate(1deg); }
+        }
+        
+        .item {
+            background: 
+                radial-gradient(circle at center, #FFD700 30%, #FFA500 60%, #FF8C00 90%);
+            color: #FFFFE0;
+            animation: itemShine 2s infinite ease-in-out;
+            text-shadow: 
+                0 0 5px #FFD700,
+                2px 2px 0 #B8860B;
+            box-shadow: 
+                0 0 10px rgba(255,215,0,0.7),
+                inset 2px 2px 0 rgba(255,255,224,0.8);
+        }
+        
+        @keyframes itemShine {
+            0%, 100% { 
+                box-shadow: 
+                    0 0 10px rgba(255,215,0,0.7),
+                    inset 2px 2px 0 rgba(255,255,224,0.8);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 
+                    0 0 20px rgba(255,215,0,1),
+                    inset 2px 2px 0 rgba(255,255,224,1);
+                transform: scale(1.1);
+            }
+        }
+        
+        /* Enhanced Virtual Controls - Smaller & Transparent */
+        .virtual-buttons {
+            position: fixed;
+            bottom: 15px;
+            left: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 2500;
+            opacity: 0.7;
+        }
+        
+        .virtual-buttons-row {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .action-btn {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255,68,68,0.9), rgba(170,34,34,0.9));
+            border: 3px solid rgba(255,255,255,0.8);
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            touch-action: manipulation;
+            box-shadow: 
+                inset 2px 2px 0 rgba(255,255,255,0.3),
+                3px 3px 6px rgba(0,0,0,0.5);
+            transition: all 0.15s ease;
+            backdrop-filter: blur(2px);
+        }
+        
+        .action-btn.b-btn {
+            background: linear-gradient(135deg, rgba(68,68,255,0.9), rgba(34,34,170,0.9));
+        }
+        
+        .action-btn.map-btn {
+            background: linear-gradient(135deg, rgba(68,255,68,0.9), rgba(34,170,34,0.9));
+            width: 50px;
+            height: 50px;
+            font-size: 14px;
+        }
+        
+        .action-btn:active {
+            transform: translate(2px, 2px) scale(0.95);
+            box-shadow: 
+                inset 2px 2px 0 rgba(255,255,255,0.3),
+                1px 1px 3px rgba(0,0,0,0.5);
+        }
+        
+        .virtual-dpad {
+            position: fixed;
+            bottom: 15px;
+            right: 15px;
+            width: 120px;
+            height: 120px;
+            z-index: 2500;
+            opacity: 0.7;
+        }
+        
+        .dpad-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 3px;
+        }
+        
+        .dpad-btn {
+            background: linear-gradient(135deg, rgba(85,85,85,0.9), rgba(119,119,119,0.9));
+            border: 2px solid rgba(153,153,153,0.8);
+            color: #fff;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            touch-action: manipulation;
+            box-shadow: 
+                inset 2px 2px 0 rgba(255,255,255,0.3),
+                2px 2px 4px rgba(0,0,0,0.5);
+            transition: all 0.1s ease;
+            border-radius: 4px;
+            backdrop-filter: blur(2px);
+        }
+        
+        .dpad-btn:active {
+            background: linear-gradient(135deg, rgba(119,119,119,0.9), rgba(153,153,153,0.9));
+            transform: translate(1px, 1px);
+            box-shadow: 
+                inset 2px 2px 0 rgba(255,255,255,0.3),
+                1px 1px 2px rgba(0,0,0,0.5);
+        }
+        
+        .dpad-up { grid-column: 2; grid-row: 1; }
+        .dpad-left { grid-column: 1; grid-row: 2; }
+        .dpad-center { 
+            grid-column: 2; 
+            grid-row: 2; 
+            background: linear-gradient(135deg, rgba(68,68,68,0.9), rgba(102,102,102,0.9)); 
+            border-color: rgba(119,119,119,0.8); 
+            font-size: 14px; 
+        }
+        .dpad-right { grid-column: 3; grid-row: 2; }
+        .dpad-down { grid-column: 2; grid-row: 3; }
+        
+        /* Enhanced UI Sidebar */
+        .ui-sidebar {
+            background: 
+                linear-gradient(180deg, rgba(26,26,46,0.95) 0%, rgba(22,33,62,0.95) 100%);
+            border-left: 2px solid #00ffff;
+            display: flex;
+            flex-direction: column;
+            width: 150px;
+            position: relative;
+            overflow-y: auto;
+            flex-shrink: 0;
+            backdrop-filter: blur(3px);
+            box-shadow: 
+                inset 2px 0 10px rgba(0, 255, 255, 0.1),
+                -3px 0 15px rgba(0, 255, 255, 0.2);
+        }
+        
+        .ui-panel {
+            background: 
+                linear-gradient(135deg, rgba(42,42,62,0.9), rgba(26,26,46,0.9));
+            border: 2px solid #00ffff;
+            margin: 3px;
+            padding: 6px;
+            box-shadow: 
+                inset 1px 1px 0 rgba(0,255,255,0.15),
+                inset -1px -1px 0 rgba(0,0,0,0.6),
+                0 0 10px rgba(0, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        
+        .panel-title {
+            font-size: clamp(5px, 1.8vw, 7px);
+            color: #ffff00;
+            text-align: center;
+            margin-bottom: 4px;
+            text-shadow: 
+                1px 1px 0 #000,
+                0 0 5px #ffff00;
+            background: rgba(0,0,0,0.6);
+            padding: 2px;
+            line-height: 1.2;
+            border-radius: 2px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 2px 0;
+            font-size: clamp(4px, 1.4vw, 6px);
+            line-height: 1.3;
+        }
+        
+        .stat-label {
+            color: #888;
+            text-shadow: 1px 1px 0 #000;
+        }
+        
+        .stat-value {
+            color: #00ffff;
+            text-shadow: 
+                1px 1px 0 #000,
+                0 0 3px #00ffff;
+        }
+        
+        .terminal-window {
+            background: rgba(0,0,0,0.9);
+            border: 2px solid #00ff00;
+            padding: 4px;
+            margin: 3px 0;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: clamp(4px, 1.4vw, 6px);
+            line-height: 1.4;
+            height: 70px;
+            overflow-y: auto;
+            box-shadow: 
+                inset 0 0 8px rgba(0,255,0,0.3),
+                0 0 5px rgba(0,255,0,0.4);
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            border-radius: 3px;
+        }
+        
+        .terminal-window::-webkit-scrollbar {
+            display: none;
+        }
+
+        .plot-window {
+            background: rgba(5, 5, 15, 0.9);
+            border: 2px solid #ff6b6b;
+            padding: 4px;
+            margin: 3px 0;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: clamp(4px, 1.4vw, 6px);
+            line-height: 1.4;
+            height: 70px;
+            overflow-y: auto;
+            box-shadow: 
+                inset 0 0 8px rgba(255,107,107,0.3),
+                0 0 5px rgba(255,107,107,0.4);
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            border-radius: 3px;
+        }
+
+        .plot-window::-webkit-scrollbar {
+            display: none;
+        }
+
+        .battle-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 4000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .battle-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .battle-card {
+            width: min(520px, 90vw);
+            background: linear-gradient(135deg, rgba(20, 20, 35, 0.95), rgba(10, 10, 20, 0.95));
+            border: 2px solid #00ffff;
+            padding: 16px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .battle-title {
+            color: #ffff00;
+            font-size: clamp(8px, 2.6vw, 12px);
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .battle-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: clamp(5px, 1.8vw, 7px);
+            margin-bottom: 12px;
+        }
+
+        .battle-bar {
+            height: 8px;
+            background: #222;
+            border: 1px solid #00ffff;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .battle-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000);
+        }
+
+        .battle-log {
+            background: rgba(0,0,0,0.7);
+            border: 1px solid #00ff00;
+            padding: 6px;
+            height: 90px;
+            overflow-y: auto;
+            text-align: left;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: clamp(5px, 1.6vw, 7px);
+            margin-bottom: 12px;
+        }
+
+        .battle-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .battle-btn {
+            padding: 8px 12px;
+            border: 2px solid #00ffff;
+            background: rgba(0, 255, 255, 0.1);
+            color: #00ffff;
+            font-family: 'Press Start 2P', monospace;
+            font-size: clamp(6px, 1.6vw, 9px);
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+
+        .battle-btn:active {
+            transform: translateY(1px);
+            box-shadow: inset 0 0 6px rgba(0, 255, 255, 0.4);
+        }
+        
+        /* Mobile Optimizations */
+        @media (orientation: portrait) {
+            .main-game {
+                flex-direction: column;
+            }
+            
+            .ui-sidebar {
+                width: 100%;
+                height: 100px;
+                flex-direction: row;
+                overflow-x: auto;
+                overflow-y: hidden;
+                border-left: none;
+                border-top: 2px solid #00ffff;
+            }
+            
+            .ui-panel {
+                min-width: 130px;
+                margin: 2px;
+                flex-shrink: 0;
+            }
+            
+            .virtual-buttons {
+                bottom: 110px;
+            }
+            
+            .virtual-dpad {
+                bottom: 110px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .top-status {
+                padding: 6px 8px;
+            }
+            
+            .status-left, .status-right {
+                min-width: 80px;
+            }
+            
+            .world-canvas {
+                grid-template-columns: repeat(24, 1fr);
+                grid-template-rows: repeat(18, 1fr);
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>OCR Utility</h1>
-    <form method="post" enctype="multipart/form-data">
-        <label>Image: <input type="file" name="image" required></label><br>
-        <label><input type="checkbox" name="invert"> Invert</label>
-        <label><input type="checkbox" name="mirror"> Mirror</label>
-        <label><input type="checkbox" name="flip_vertical"> Flip Vertical</label>
-        <label>Rotate:
-            <select name="rotate">
-                <option value="0">0</option>
-                <option value="90">90</option>
-                <option value="180">180</option>
-                <option value="270">270</option>
-            </select>
-        </label>
-        <label>OCR language: <input type="text" name="lang" value="eng"></label>
-        <label>Translate to: <input type="text" name="translate_to"></label>
-        <label><input type="checkbox" name="romanize"> Romanize</label>
-        <button type="submit">Process</button>
-    </form>
+    <!-- Top Status Bar -->
+    <div class="top-status">
+        <div class="status-left">
+            <div>HP: <span id="playerHP">100/100</span></div>
+            <div>MP: <span id="playerProteus">50/50</span></div>
+            <div>LV: <span id="playerLevel">1</span></div>
+        </div>
+        
+        <div class="main-title">
+            <div class="title">CODEX: UNIFRACTURAL GLYPHOS</div>
+            <div class="subtitle">OPEN WORLD ADVENTURE</div>
+        </div>
+        
+        <div class="status-right">
+            <div>AREA: <span id="currentArea">WILDERNESS</span></div>
+            <div>XP: <span id="playerXP">0/100</span></div>
+            <div>STATUS: <span style="color: #00ff00;">EXPLORING</span></div>
+        </div>
+    </div>
 
-    {% if result %}
-    <h2>OCR Result</h2>
-    <pre>{{ result }}</pre>
-    {% if romanized %}
-    <h3>Romanized</h3>
-    <pre>{{ romanized }}</pre>
-    {% endif %}
-    <h3>Character Names</h3>
-    <ul>
-        {% for line in char_info %}
-        <li>{{ line }}</li>
-        {% endfor %}
-    </ul>
-    {% if translation %}
-    <h3>Translation</h3>
-    <pre>{{ translation }}</pre>
-    {% endif %}
-    {% if processed_image %}
-    <h3>Processed Image</h3>
-    <img src="data:image/png;base64,{{ processed_image }}" alt="Processed image"/>
-    {% endif %}
-    {% endif %}
+    <!-- Virtual Action Buttons -->
+    <div class="virtual-buttons" id="virtualButtons">
+        <div class="virtual-buttons-row">
+            <div class="action-btn b-btn" id="bButton">B</div>
+            <div class="action-btn" id="aButton">A</div>
+        </div>
+        <div class="action-btn map-btn" id="infoButton">?</div>
+    </div>
+
+    <!-- Virtual D-Pad -->
+    <div class="virtual-dpad" id="virtualDpad">
+        <div class="dpad-container">
+            <div></div>
+            <div class="dpad-btn dpad-up" data-direction="up">▲</div>
+            <div></div>
+            <div class="dpad-btn dpad-left" data-direction="left">◀</div>
+            <div class="dpad-btn dpad-center">⊙</div>
+            <div class="dpad-btn dpad-right" data-direction="right">▶</div>
+            <div></div>
+            <div class="dpad-btn dpad-down" data-direction="down">▼</div>
+            <div></div>
+        </div>
+    </div>
+
+    <div class="game-container" id="gameContainer">
+        <!-- Main Game Area -->
+        <div class="main-game">
+            <!-- Game World -->
+            <div class="game-world">
+                <div class="world-canvas" id="worldCanvas"></div>
+            </div>
+            
+            <!-- UI Sidebar -->
+            <div class="ui-sidebar">
+                <!-- Enhanced Status Panel -->
+                <div class="ui-panel">
+                    <div class="panel-title">⚡ EXPLORER ⚡</div>
+                    <div class="stat-row">
+                        <span class="stat-label">HEALTH:</span>
+                        <span class="stat-value" id="playerHP2">100/100</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">ENERGY:</span>
+                        <span class="stat-value" id="playerProteus2">50/50</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">COORDS:</span>
+                        <span class="stat-value" id="playerCoords">16,12</span>
+                    </div>
+                </div>
+                
+                <!-- Terminal -->
+                <div class="ui-panel" style="flex: 1;">
+                    <div class="panel-title">📡 ADVENTURE LOG 📡</div>
+                    <div class="terminal-window" id="gameLog">
+                        <span style="color: #00ff00;">&gt; OUTDOOR EXPLORATION MODE ACTIVE</span><br>
+                        <span style="color: #ffff00;">&gt; VAST WILDERNESS AWAITS DISCOVERY</span><br>
+                        <span style="color: #ff6b6b;">&gt; A=INTERACT, B=EXAMINE, ?=INFO</span><br>
+                    </div>
+                </div>
+
+                <div class="ui-panel">
+                    <div class="panel-title">📜 STORY NODE 📜</div>
+                    <div class="plot-window" id="plotLog">
+                        <span style="color: #ff6b6b;">&gt; The Codex whispers of fractured glyphs.</span><br>
+                        <span style="color: #00ffff;">&gt; Seek the five star fragments to unlock the Gate.</span><br>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="battle-overlay" id="battleOverlay">
+        <div class="battle-card">
+            <div class="battle-title" id="battleTitle">ENCOUNTER</div>
+            <div class="battle-stats">
+                <div>
+                    <div>PLAYER HP: <span id="battlePlayerHp">100/100</span></div>
+                    <div class="battle-bar">
+                        <div class="battle-bar-fill" id="battlePlayerBar"></div>
+                    </div>
+                </div>
+                <div>
+                    <div>FOE HP: <span id="battleEnemyHp">30/30</span></div>
+                    <div class="battle-bar">
+                        <div class="battle-bar-fill" id="battleEnemyBar"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="battle-log" id="battleLog">
+                &gt; A foe emerges from the wilds.<br>
+            </div>
+            <div class="battle-actions">
+                <button class="battle-btn" id="attackBtn">Attack</button>
+                <button class="battle-btn" id="defendBtn">Defend</button>
+                <button class="battle-btn" id="focusBtn">Focus</button>
+                <button class="battle-btn" id="runBtn">Run</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let gameState = {
+            player: { 
+                x: 16, y: 12, hp: 100, maxHp: 100, 
+                proteus: 50, maxProteus: 50, level: 1, xp: 0 
+            },
+            mapWidth: 32,
+            mapHeight: 24,
+            gameMap: [],
+            entities: [],
+            gameStarted: false,
+            inventory: [],
+            npcsSpoken: 0,
+            itemsCollected: 0,
+            storyChapter: 1,
+            fragmentsFound: 0,
+            battle: {
+                active: false,
+                enemy: null,
+                playerGuarding: false
+            }
+        };
+        
+        // COMPLETE OUTDOOR WORLD GENERATION
+        function generateOutdoorWorld() {
+            const { mapWidth, mapHeight } = gameState;
+            gameState.gameMap = [];
+            
+            // Initialize empty map
+            for (let y = 0; y < mapHeight; y++) {
+                gameState.gameMap[y] = [];
+                for (let x = 0; x < mapWidth; x++) {
+                    gameState.gameMap[y][x] = { 
+                        type: 'terrain', 
+                        terrainClass: 'grass',
+                        symbol: '·',
+                        entity: null 
+                    };
+                }
+            }
+            
+            // Generate river running diagonally
+            for (let i = 0; i < Math.min(mapWidth, mapHeight) - 5; i++) {
+                const x = i + 2;
+                const y = Math.floor(i * 0.7) + 5;
+                if (x < mapWidth && y < mapHeight) {
+                    gameState.gameMap[y][x] = {
+                        type: 'terrain',
+                        terrainClass: 'water',
+                        symbol: '~'
+                    };
+                    // Add bridge at one point
+                    if (i === Math.floor(mapWidth * 0.4)) {
+                        gameState.gameMap[y][x] = {
+                            type: 'terrain',
+                            terrainClass: 'bridge',
+                            symbol: '='
+                        };
+                    }
+                }
+            }
+            
+            // Add dirt path
+            for (let x = 0; x < mapWidth; x++) {
+                const y = Math.floor(mapHeight * 0.6) + Math.floor(Math.sin(x * 0.3) * 2);
+                if (y >= 0 && y < mapHeight) {
+                    gameState.gameMap[y][x] = {
+                        type: 'terrain',
+                        terrainClass: 'dirt-path',
+                        symbol: '·'
+                    };
+                }
+            }
+            
+            // Generate forest area (top-left)
+            for (let y = 1; y < 8; y++) {
+                for (let x = 1; x < 12; x++) {
+                    if (Math.random() < 0.4) {
+                        gameState.gameMap[y][x] = {
+                            type: 'terrain',
+                            terrainClass: 'tree',
+                            symbol: '♠'
+                        };
+                    }
+                }
+            }
+            
+            // Generate mountain range (top-right)
+            for (let y = 1; y < 10; y++) {
+                for (let x = mapWidth - 10; x < mapWidth - 1; x++) {
+                    if (Math.random() < 0.6) {
+                        gameState.gameMap[y][x] = {
+                            type: 'terrain',
+                            terrainClass: 'mountain',
+                            symbol: '^'
+                        };
+                    }
+                }
+            }
+            
+            // Add scattered rocks
+            for (let i = 0; i < 15; i++) {
+                const x = Math.floor(Math.random() * mapWidth);
+                const y = Math.floor(Math.random() * mapHeight);
+                
+                if (gameState.gameMap[y][x].terrainClass === 'grass') {
+                    gameState.gameMap[y][x] = {
+                        type: 'terrain',
+                        terrainClass: 'rock',
+                        symbol: 'o'
+                    };
+                }
+            }
+            
+            // Add flowers in open grass areas
+            for (let i = 0; i < 20; i++) {
+                const x = Math.floor(Math.random() * mapWidth);
+                const y = Math.floor(Math.random() * mapHeight);
+                
+                if (gameState.gameMap[y][x].terrainClass === 'grass' && Math.random() < 0.3) {
+                    gameState.gameMap[y][x] = {
+                        type: 'terrain',
+                        terrainClass: 'flower',
+                        symbol: '*'
+                    };
+                }
+            }
+            
+            // Add NPCs in various locations
+            addEntity('npc', 8, 4, 'T', 'An old traveler resting by the trees');
+            addEntity('npc', 25, 15, 'V', 'A village person gathering herbs');
+            addEntity('npc', 12, 18, 'F', 'A farmer working the land');
+            addEntity('npc', 28, 8, 'G', 'A mountain guide');
+            
+            // Add animals
+            addEntity('animal', 5, 10, 'R', 'A rabbit hopping through the grass');
+            addEntity('animal', 18, 6, 'B', 'A bird perched on a branch');
+            addEntity('animal', 22, 20, 'D', 'A deer grazing peacefully');
+            addEntity('animal', 30, 5, 'E', 'An eagle circling overhead');
+            
+            // Add treasure items
+            addEntity('item', 3, 16, '$', 'Ancient coins buried in the earth');
+            addEntity('item', 15, 3, '♦', 'A sparkling gem hidden in rocks');
+            addEntity('item', 26, 22, '⚡', 'A mysterious glowing crystal');
+            addEntity('item', 7, 19, '☆', 'A fallen star fragment');
+            addEntity('item', 20, 12, '♪', 'An enchanted flute');
+            
+            // Set player starting position (center of map)
+            gameState.player.x = Math.floor(mapWidth / 2);
+            gameState.player.y = Math.floor(mapHeight / 2);
+            
+            // Ensure player starts on grass
+            gameState.gameMap[gameState.player.y][gameState.player.x] = {
+                type: 'terrain',
+                terrainClass: 'grass',
+                symbol: '·'
+            };
+        }
+        
+        function addEntity(type, x, y, symbol, description) {
+            if (x >= 0 && x < gameState.mapWidth && y >= 0 && y < gameState.mapHeight) {
+                gameState.gameMap[y][x].entity = {
+                    type: type,
+                    symbol: symbol,
+                    description: description
+                };
+            }
+        }
+        
+        // Initialize Game
+        function initializeGame() {
+            setupVirtualControls();
+            setupBattleControls();
+            
+            generateOutdoorWorld();
+            gameState.gameStarted = true;
+            
+            renderGame();
+            updateUI();
+            
+            logMessage('<span style="color: #00ff00;">=== OUTDOOR EXPLORATION BEGINS ===</span>');
+            logMessage('<span style="color: #ffff00;">You find yourself in a vast wilderness...</span>');
+            logMessage('<span style="color: #ff6b6b;">Explore freely - discover NPCs, animals, and treasures!</span>');
+            plotMessage('<span style="color: #ff6b6b;">The Unifractual Codex stirs within your pack.</span>');
+            plotMessage('<span style="color: #00ffff;">Gather star fragments to awaken the Glyph Gate.</span>');
+        }
+        
+        function setupVirtualControls() {
+            const dpadButtons = document.querySelectorAll('.dpad-btn[data-direction]');
+            const aButton = document.getElementById('aButton');
+            const bButton = document.getElementById('bButton');
+            const infoButton = document.getElementById('infoButton');
+            
+            dpadButtons.forEach(btn => {
+                const direction = btn.dataset.direction;
+                
+                function handleDirection() {
+                    if (!gameState.gameStarted) return;
+                    
+                    switch(direction) {
+                        case 'up': movePlayer(0, -1); break;
+                        case 'down': movePlayer(0, 1); break;
+                        case 'left': movePlayer(-1, 0); break;
+                        case 'right': movePlayer(1, 0); break;
+                    }
+                }
+                
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDirection();
+                });
+                
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    handleDirection();
+                });
+            });
+            
+            [aButton, bButton, infoButton].forEach(btn => {
+                btn.addEventListener('touchstart', (e) => e.preventDefault());
+                btn.addEventListener('click', (e) => e.preventDefault());
+            });
+            
+            aButton.addEventListener('click', () => {
+                if (gameState.gameStarted) interact();
+            });
+            
+            bButton.addEventListener('click', () => {
+                if (gameState.gameStarted) examine();
+            });
+            
+            infoButton.addEventListener('click', () => {
+                if (gameState.gameStarted) showInfo();
+            });
+        }
+
+        function setupBattleControls() {
+            document.getElementById('attackBtn').addEventListener('click', () => battleAction('attack'));
+            document.getElementById('defendBtn').addEventListener('click', () => battleAction('defend'));
+            document.getElementById('focusBtn').addEventListener('click', () => battleAction('focus'));
+            document.getElementById('runBtn').addEventListener('click', () => battleAction('run'));
+        }
+        
+        function movePlayer(dx, dy) {
+            if (gameState.battle.active) return;
+            const newX = gameState.player.x + dx;
+            const newY = gameState.player.y + dy;
+            
+            if (newX < 0 || newX >= gameState.mapWidth || 
+                newY < 0 || newY >= gameState.mapHeight) {
+                logMessage('<span style="color: #888;">You cannot go that way - wilderness boundary reached.</span>');
+                return;
+            }
+            
+            gameState.player.x = newX;
+            gameState.player.y = newY;
+            
+            const currentCell = gameState.gameMap[newY][newX];
+            
+            // Check terrain messages
+            checkTerrain(currentCell);
+            
+            // Check entity encounters
+            if (currentCell.entity) {
+                handleEntityEncounter(currentCell.entity);
+            }
+
+            if (!gameState.battle.active && Math.random() < 0.12) {
+                startBattle({
+                    name: 'Wild Shade',
+                    hp: 35 + Math.floor(Math.random() * 15),
+                    maxHp: 50,
+                    attack: 6 + Math.floor(Math.random() * 4),
+                    description: 'A flickering echo of the old world.'
+                });
+            }
+            
+            renderGame();
+            updateUI();
+        }
+        
+        function checkTerrain(cell) {
+            const terrainMessages = {
+                'water': '<span style="color: #4682B4;">💧 You step into cool, clear water</span>',
+                'dirt-path': '<span style="color: #8B4513;">🛤️ You follow the well-worn path</span>',
+                'tree': '<span style="color: #228B22;">🌲 You walk among ancient trees</span>',
+                'mountain': '<span style="color: #708090;">⛰️ You climb rocky mountain terrain</span>',
+                'rock': '<span style="color: #A9A9A9;">🗿 You navigate around large stones</span>',
+                'flower': '<span style="color: #FF69B4;">🌸 Beautiful flowers surround you</span>',
+                'bridge': '<span style="color: #8B4513;">🌉 You cross the sturdy wooden bridge</span>'
+            };
+            
+            const message = terrainMessages[cell.terrainClass];
+            if (message && Math.random() < 0.3) { // 30% chance for terrain message
+                logMessage(message);
+            }
+        }
+        
+        function handleEntityEncounter(entity) {
+            switch(entity.type) {
+                case 'npc':
+                    logMessage(`<span style="color: #00ff00;">👋 You meet: ${entity.description}</span>`);
+                    plotMessage('<span style="color: #ffff00;">NPC whispers: The Gate stirs when five fragments align.</span>');
+                    break;
+                case 'animal':
+                    logMessage(`<span style="color: #ffff00;">🐾 You spot: ${entity.description}</span>`);
+                    break;
+                case 'item':
+                    logMessage(`<span style="color: #FFD700;">✨ You discover: ${entity.description}</span>`);
+                    break;
+            }
+        }
+        
+        function renderGame() {
+            const canvas = document.getElementById('worldCanvas');
+            canvas.innerHTML = '';
+            
+            for (let y = 0; y < gameState.mapHeight; y++) {
+                for (let x = 0; x < gameState.mapWidth; x++) {
+                    const cell = gameState.gameMap[y][x];
+                    const pixel = document.createElement('div');
+                    pixel.className = 'pixel';
+                    
+                    // Apply terrain class and symbol
+                    if (cell.terrainClass) {
+                        pixel.classList.add(cell.terrainClass);
+                        pixel.textContent = cell.symbol || '·';
+                    }
+                    
+                    // Add entity if present
+                    if (cell.entity) {
+                        pixel.textContent = cell.entity.symbol;
+                        pixel.classList.add(cell.entity.type);
+                    }
+                    
+                    // Add player
+                    if (x === gameState.player.x && y === gameState.player.y) {
+                        pixel.textContent = '@';
+                        pixel.className = 'pixel player';
+                    }
+                    
+                    canvas.appendChild(pixel);
+                }
+            }
+        }
+        
+        function updateUI() {
+            const player = gameState.player;
+            
+            // Top status stats
+            document.getElementById('playerHP').textContent = `${player.hp}/${player.maxHp}`;
+            document.getElementById('playerProteus').textContent = `${player.proteus}/${player.maxProteus}`;
+            document.getElementById('playerLevel').textContent = player.level;
+            document.getElementById('playerXP').textContent = `${player.xp}/${player.level * 100}`;
+            
+            // Sidebar stats
+            document.getElementById('playerHP2').textContent = `${player.hp}/${player.maxHp}`;
+            document.getElementById('playerProteus2').textContent = `${player.proteus}/${player.maxProteus}`;
+            document.getElementById('playerCoords').textContent = `${player.x},${player.y}`;
+        }
+        
+        function logMessage(message) {
+            const log = document.getElementById('gameLog');
+            log.innerHTML += `<br>&gt; ${message}`;
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function interact() {
+            const x = gameState.player.x;
+            const y = gameState.player.y;
+            const cell = gameState.gameMap[y][x];
+            
+            if (cell.entity) {
+                switch(cell.entity.type) {
+                    case 'npc':
+                        const npcDialogue = [
+                            'Welcome, traveler! This wilderness holds many secrets.',
+                            'I\'ve seen strange lights in the mountains at night...',
+                            'The old bridge was built by ancient peoples long ago.',
+                            'Be careful near the water - sometimes things lurk beneath.',
+                            'The flowers here are said to have magical properties.',
+                            'Have you found any of the legendary star fragments?'
+                        ];
+                        const dialogue = npcDialogue[Math.floor(Math.random() * npcDialogue.length)];
+                        logMessage(`<span style="color: #00ff00;">💬 "${dialogue}"</span>`);
+                        gameState.npcsSpoken++;
+                        break;
+                        
+                    case 'item':
+                        logMessage('<span style="color: #FFD700;">⚡ Treasure collected! Energy restored!</span>');
+                        gameState.player.proteus = Math.min(gameState.player.maxProteus, gameState.player.proteus + 10);
+                        gameState.player.xp += 20;
+                        gameState.itemsCollected++;
+                        gameState.fragmentsFound++;
+                        plotMessage(`<span style="color: #ff6b6b;">Fragment recovered (${gameState.fragmentsFound}/5).</span>`);
+                        if (gameState.fragmentsFound === 5) {
+                            gameState.storyChapter = 2;
+                            plotMessage('<span style="color: #00ffff;">The Glyph Gate awakens. Return to the bridge.</span>');
+                        }
+                        cell.entity = null;
+                        renderGame();
+                        updateUI();
+                        break;
+                        
+                    case 'animal':
+                        startBattle({
+                            name: 'Territorial Beast',
+                            hp: 40,
+                            maxHp: 40,
+                            attack: 8,
+                            description: 'It guards a hidden trail.'
+                        });
+                        break;
+                }
+            } else {
+                const environmentActions = [
+                    'You take a deep breath of the fresh wilderness air.',
+                    'You listen to the sounds of nature around you.',
+                    'You feel the earth beneath your feet.',
+                    'The wind rustles through the landscape.',
+                    'You appreciate the natural beauty of this place.'
+                ];
+                const action = environmentActions[Math.floor(Math.random() * environmentActions.length)];
+                logMessage(`<span style="color: #00ffff;">🌍 ${action}</span>`);
+            }
+        }
+        
+        function examine() {
+            const x = gameState.player.x;
+            const y = gameState.player.y;
+            const cell = gameState.gameMap[y][x];
+            
+            if (cell.entity) {
+                logMessage(`<span style="color: #ffff00;">🔍 ${cell.entity.description}</span>`);
+            } else {
+                const terrainExamine = {
+                    'grass': 'Lush green grass sways gently in the breeze.',
+                    'water': 'Clear water flows peacefully. You can see fish swimming below.',
+                    'dirt-path': 'A well-traveled path worn smooth by countless footsteps.',
+                    'tree': 'Ancient trees with thick trunks and leafy canopies.',
+                    'mountain': 'Rugged rocky peaks reaching toward the sky.',
+                    'rock': 'Weathered stone, probably here for thousands of years.',
+                    'flower': 'Colorful wildflowers that seem to glow with inner light.',
+                    'bridge': 'Sturdy wooden planks held together with iron bindings.'
+                };
+                
+                const description = terrainExamine[cell.terrainClass] || 'An unremarkable patch of wilderness.';
+                logMessage(`<span style="color: #ff6b6b;">🌍 ${description}</span>`);
+            }
+        }
+        
+        function showInfo() {
+            logMessage(`<span style="color: #ffff00;">📊 EXPLORATION STATS:</span>`);
+            logMessage(`<span style="color: #00ffff;">   NPCs Met: ${gameState.npcsSpoken}</span>`);
+            logMessage(`<span style="color: #00ffff;">   Treasures Found: ${gameState.itemsCollected}</span>`);
+            logMessage(`<span style="color: #00ffff;">   Coordinates: ${gameState.player.x},${gameState.player.y}</span>`);
+            logMessage(`<span style="color: #888;">   Map Size: ${gameState.mapWidth}x${gameState.mapHeight}</span>`);
+            logMessage(`<span style="color: #ff6b6b;">   Fragments: ${gameState.fragmentsFound}/5</span>`);
+        }
+
+        function plotMessage(message) {
+            const plot = document.getElementById('plotLog');
+            plot.innerHTML += `<br>&gt; ${message}`;
+            plot.scrollTop = plot.scrollHeight;
+        }
+
+        function startBattle(enemy) {
+            if (gameState.battle.active) return;
+            gameState.battle = {
+                active: true,
+                enemy: {
+                    name: enemy.name,
+                    hp: enemy.hp,
+                    maxHp: enemy.maxHp,
+                    attack: enemy.attack,
+                    description: enemy.description
+                },
+                playerGuarding: false
+            };
+            document.getElementById('battleTitle').textContent = `${enemy.name.toUpperCase()} APPEARS`;
+            document.getElementById('battleLog').innerHTML = `&gt; ${enemy.description}<br>`;
+            updateBattleUI();
+            document.getElementById('battleOverlay').classList.add('active');
+            logMessage(`<span style="color: #ff6b6b;">⚔️ ${enemy.name} challenges you!</span>`);
+        }
+
+        function battleAction(action) {
+            if (!gameState.battle.active) return;
+            const player = gameState.player;
+            const enemy = gameState.battle.enemy;
+            const battleLog = document.getElementById('battleLog');
+
+            if (action === 'run') {
+                if (Math.random() < 0.5) {
+                    battleLog.innerHTML += '&gt; You escape into the brush.<br>';
+                    endBattle();
+                    return;
+                }
+                battleLog.innerHTML += '&gt; Escape failed. The foe presses in.<br>';
+            }
+
+            if (action === 'attack') {
+                const damage = 8 + Math.floor(Math.random() * 6);
+                enemy.hp = Math.max(0, enemy.hp - damage);
+                battleLog.innerHTML += `&gt; You strike for ${damage} damage.<br>`;
+            }
+
+            if (action === 'defend') {
+                gameState.battle.playerGuarding = true;
+                battleLog.innerHTML += '&gt; You brace for impact.<br>';
+            }
+
+            if (action === 'focus') {
+                player.proteus = Math.min(player.maxProteus, player.proteus + 6);
+                battleLog.innerHTML += '&gt; You focus and restore energy.<br>';
+            }
+
+            if (enemy.hp <= 0) {
+                battleLog.innerHTML += `&gt; ${enemy.name} dissolves into glyphs.<br>`;
+                player.xp += 30;
+                plotMessage('<span style="color: #00ffff;">A victory rune glows within the Codex.</span>');
+                endBattle();
+                return;
+            }
+
+            enemyTurn();
+            updateBattleUI();
+            updateUI();
+        }
+
+        function enemyTurn() {
+            const player = gameState.player;
+            const enemy = gameState.battle.enemy;
+            const battleLog = document.getElementById('battleLog');
+
+            let damage = enemy.attack + Math.floor(Math.random() * 5);
+            if (gameState.battle.playerGuarding) {
+                damage = Math.ceil(damage * 0.5);
+                gameState.battle.playerGuarding = false;
+                battleLog.innerHTML += '&gt; Your guard softens the blow.<br>';
+            }
+            player.hp = Math.max(0, player.hp - damage);
+            battleLog.innerHTML += `&gt; ${enemy.name} hits for ${damage} damage.<br>`;
+
+            if (player.hp <= 0) {
+                battleLog.innerHTML += '&gt; You fall... but the Codex restores you.<br>';
+                player.hp = player.maxHp;
+                player.proteus = player.maxProteus;
+                plotMessage('<span style="color: #ff6b6b;">The Codex drags you back from the void.</span>');
+                endBattle();
+            }
+        }
+
+        function updateBattleUI() {
+            const player = gameState.player;
+            const enemy = gameState.battle.enemy;
+            document.getElementById('battlePlayerHp').textContent = `${player.hp}/${player.maxHp}`;
+            document.getElementById('battleEnemyHp').textContent = `${enemy.hp}/${enemy.maxHp}`;
+            document.getElementById('battlePlayerBar').style.width = `${(player.hp / player.maxHp) * 100}%`;
+            document.getElementById('battleEnemyBar').style.width = `${(enemy.hp / enemy.maxHp) * 100}%`;
+        }
+
+        function endBattle() {
+            gameState.battle.active = false;
+            document.getElementById('battleOverlay').classList.remove('active');
+            updateUI();
+        }
+        
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameState.gameStarted) return;
+            if (gameState.battle.active) return;
+            
+            switch(e.key.toLowerCase()) {
+                case 'w': case 'arrowup': movePlayer(0, -1); e.preventDefault(); break;
+                case 's': case 'arrowdown': movePlayer(0, 1); e.preventDefault(); break;
+                case 'a': case 'arrowleft': movePlayer(-1, 0); e.preventDefault(); break;
+                case 'd': case 'arrowright': movePlayer(1, 0); e.preventDefault(); break;
+                case ' ': case 'enter': interact(); e.preventDefault(); break;
+                case 'e': examine(); e.preventDefault(); break;
+                case 'i': showInfo(); e.preventDefault(); break;
+            }
+        });
+        
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+        
+        document.addEventListener('DOMContentLoaded', initializeGame);
+        
+    </script>
 </body>
 </html>
