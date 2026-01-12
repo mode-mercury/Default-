@@ -1,0 +1,23 @@
+{
+  "name": "default-",
+  "version": "1.0.0",
+  "description": "This repository contains a simple command line tool for performing OCR (Optical Character Recognition) on an image. The tool allows you to optionally transform the image (invert colors, mirror horizontally, flip vertically or rotate) before OCR. After recognizing the text, it prints each character together with its Unicode name. Optionally the text can be translated to another language using Google Translate.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "hardhat": "^2.26.3"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0"
+  }
+}
