@@ -51,5 +51,11 @@ def index():
         romanized=romanized,
     )
 
+
+@app.route('/blockchain')
+def blockchain():
+    """Render the spirituality chain prototype page."""
+    return render_template('blockchain.html')
+
 if __name__ == '__main__':
     app.run(debug=True)
