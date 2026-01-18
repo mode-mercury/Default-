@@ -1354,16 +1354,115 @@ const HYPERFX_ENGINE = (() => {
   }
 
   const drawCanvas = document.getElementById("drawCanvas");
+  const glCanvas = document.getElementById("glCanvas");
   const ctx = drawCanvas.getContext("2d", { willReadFrequently: true });
+  let gl = null;
+  let glProgram = null;
+  let glTex = null;
+  let glTimeLoc = null;
 
   function resize() {
     const r = drawCanvas.parentElement.getBoundingClientRect();
     drawCanvas.width = Math.floor(r.width);
     drawCanvas.height = Math.floor(r.height);
+    if (glCanvas) {
+      glCanvas.width = drawCanvas.width;
+      glCanvas.height = drawCanvas.height;
+      if (gl) gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+    }
   }
 
   window.addEventListener("resize", resize);
   resize();
+
+  function initWebGL() {
+    if (!glCanvas) return;
+    gl = glCanvas.getContext("webgl", { premultipliedAlpha: false });
+    if (!gl) return;
+
+    const vsSource = `
+attribute vec2 a_position;
+varying vec2 v_uv;
+void main() {
+  v_uv = (a_position + 1.0) * 0.5;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}`;
+
+    const fsSource = `
+precision mediump float;
+uniform sampler2D u_tex;
+uniform float u_time;
+varying vec2 v_uv;
+void main() {
+  vec4 c = texture2D(u_tex, v_uv);
+  float glow = sin(u_time * 2.0) * 0.05;
+  gl_FragColor = vec4(c.rgb + glow, c.a);
+}`;
+
+    function createShader(type, src) {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        console.warn("Shader error:", gl.getShaderInfoLog(s));
+        return null;
+      }
+      return s;
+    }
+
+    const vs = createShader(gl.VERTEX_SHADER, vsSource);
+    const fs = createShader(gl.FRAGMENT_SHADER, fsSource);
+    if (!vs || !fs) return;
+
+    const program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      console.warn("WebGL link fail:", gl.getProgramInfoLog(program));
+      return;
+    }
+    gl.useProgram(program);
+    glProgram = program;
+
+    const quad = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
+      gl.STATIC_DRAW
+    );
+
+    const posLoc = gl.getAttribLocation(program, "a_position");
+    gl.enableVertexAttribArray(posLoc);
+    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    glTex = tex;
+
+    glTimeLoc = gl.getUniformLocation(program, "u_time");
+    gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+  }
+
+  function applyWebGL() {
+    if (!gl || !glProgram || !glTex) return;
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.bindTexture(gl.TEXTURE_2D, glTex);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      drawCanvas
+    );
+    gl.uniform1f(glTimeLoc, performance.now() * 0.001);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
 
   function defScanlines() {
     return {
@@ -1537,6 +1636,9 @@ const HYPERFX_ENGINE = (() => {
         effect.def.apply(ctx, drawCanvas, effect.params);
       }
     }
+    if (state.settings.enableGlow) {
+      applyWebGL();
+    }
   }
 
   function loop(ts) {
@@ -1545,6 +1647,7 @@ const HYPERFX_ENGINE = (() => {
     render();
     requestAnimationFrame(loop);
   }
+  initWebGL();
   requestAnimationFrame(loop);
 
   return {
@@ -1558,6 +1661,8 @@ const HYPERFX_ENGINE = (() => {
     drawCanvas,
     ctx,
     resize,
+    initWebGL,
+    applyWebGL,
     ENGINE_EFFECTS,
     ENGINE_EFFECT_MAP,
     render
