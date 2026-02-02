@@ -86,3 +86,13 @@ To publish the site on GitHub Pages:
    `https://<username>.github.io/<repo>/`.
 
 After a minute or two the static OCR page will be live at that address.
+
+## SpiritToken Prototype
+
+This repository now includes an initial ERC-20 token contract located at `contracts/SpiritToken.sol` as a starting point for the spirituality-themed blockchain phase. The contract can be compiled and tested with Hardhat:
+
+```bash
+npx hardhat test
+```
+
+This will compile the contract and run a simple test that verifies the initial supply is assigned to the deployer.
