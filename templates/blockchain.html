@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Glitchkraft Spirituality Chain</title>
+    <link rel="stylesheet" href="/static/blockchain.css">
+</head>
+<body>
+<header>
+    <h1>Glitchkraft Culture Co.</h1>
+    <img src="/static/images/glitchkraft.png" alt="Glitchkraft logo" class="banner">
+</header>
+<section id="overview">
+    <h2>Mining & Minting</h2>
+    <p>This open source spirituality chain supports proof-of-work mining for explorers,
+       proof-of-stake minting for token holders, and quest-based minting for ARG players.
+       Bounties reward lore discoveries and community builds.</p>
+</section>
+<section id="nfts">
+    <h2>NFTs, Bounties & Apps</h2>
+    <p>Collect codex pages, archetypes and game items as NFTs.  Post bounties for
+       research or code and pay in SpiritToken.  Mobile apps connect the blockchain
+       to real-world exploration quests.</p>
+</section>
+<section id="spirituality">
+    <h2>Open Source Spirituality</h2>
+    <p>All rituals, contracts and lore live on chain under open licences.
+       Contributions are voted on by the community below.</p>
+</section>
+<section id="suggestions">
+    <h2>Suggestions & Voting</h2>
+    <form id="proposal-form">
+        <input type="text" id="proposal-text" placeholder="Your proposal" required>
+        <button type="submit">Submit</button>
+    </form>
+    <ul id="proposal-list"></ul>
+</section>
+<section id="forum">
+    <h2>Community Forum</h2>
+    <p>The public layer appears as a simple tech blog. Sign in with your
+       username, password and keys to unlock encrypted chat.</p>
+    <form id="login-form">
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <input type="text" id="pubkey" placeholder="Public Key" required>
+        <input type="text" id="privkey" placeholder="Private Key" required>
+        <button type="submit">Enter</button>
+    </form>
+    <div id="blog">This area hosts technical articles about the chain.</div>
+    <div id="chat" class="hidden">
+        <ul id="messages"></ul>
+        <input type="text" id="chat-input" placeholder="Type message">
+        <button id="send-btn">Send</button>
+    </div>
+</section>
+<footer>
+    <img src="/static/images/ohmwrecker.png" alt="Ohmwrecker" class="banner">
+</footer>
+<script src="/static/blockchain.js"></script>
+</body>
+</html>
